@@ -10,19 +10,21 @@ class Recipe(models.Model):
         on_delete=models.CASCADE,
         verbose_name='Автор рецепта'
     )
-    title = models.CharField(
+    name = models.CharField(
         max_length=256,
         verbose_name='Название рецепта'
     )
-    '''image = models.ImageField(
+    image = models.ImageField(
         upload_to='media/',  # ???
         verbose_name='Изображение рецепта'
-    )'''
+    )
     text = models.TextField(
         verbose_name='Описание'
     )
     ingredients = models.ManyToManyField(
         'Ingredient',
+        through='IngredientsInRecipe',
+        through_fields=('recipe', 'ingredient'),
         verbose_name='Ингредиенты'
     )
     tag = models.ManyToManyField(
@@ -35,7 +37,7 @@ class Recipe(models.Model):
 
 
 class Tag(models.Model):
-    title = models.CharField(
+    name = models.CharField(
         max_length=256,
         unique=True,
         verbose_name='Название тэга'
@@ -55,3 +57,32 @@ class Ingredient(models.Model):
         max_length=256,
         verbose_name='Единица измерения'
     )
+
+
+class IngredientsInRecipe(models.Model):
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE,
+        related_name='ingredient_in_recipe',
+        verbose_name='Ингредиенты'
+    )
+    ingredient = models.ForeignKey(
+        Ingredient,
+        on_delete=models.CASCADE,
+        related_name='ingredients_list',
+        verbose_name='Рецепты'
+    )
+    amount = models.PositiveSmallIntegerField('Количество')
+
+    class Meta:
+        constraints = (
+            models.UniqueConstraint(
+                fields=('ingredient', 'recipe'),
+                name='unique_ingredient'
+            ),
+        )
+        verbose_name = 'Ингредиенты рецепта'
+        verbose_name_plural = 'Ингредиенты рецептов'
+
+    def __str__(self):
+        return f'{self.recipe} - {self.ingredient}'
