@@ -1,26 +1,39 @@
 from django.shortcuts import render
-from rest_framework.viewsets import ModelViewSet
+from rest_framework import (
+    viewsets,
+    mixins
+)
 
 from recipe.models import (
     Recipe,
     Tag,
     Ingredient,
-    # User, - для него есть отдельное приложение
 )
+from users.models import User
 from .serializers import (
-    TagSerializer
+    TagSerializer,
+    IngredientSerializer
 )
 
 
-class RecipeViewSet(ModelViewSet):
+class RecipeViewSet(viewsets.ModelViewSet):
+    queryset = Recipe.objects.all()
     pass
 
 
-class TagViewSet(ModelViewSet):
+class TagViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet
+):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    permission_classes = (AllowAny, )
 
 
-class IngredientViewSet(ModelViewSet):
-    pass
+class IngredientViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet
+):
+    queryset = Ingredient.objects.all()
+    serializer_class = IngredientSerializer
