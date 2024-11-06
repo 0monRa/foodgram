@@ -15,7 +15,7 @@ class Recipe(models.Model):
         verbose_name='Название рецепта'
     )
     image = models.ImageField(
-        upload_to='media/',  # ???
+        upload_to='media/',  # Находится в settings.py
         verbose_name='Изображение рецепта'
     )
     text = models.TextField(
@@ -86,3 +86,48 @@ class IngredientsInRecipe(models.Model):
 
     def __str__(self):
         return f'{self.recipe} - {self.ingredient}'
+
+
+class Follow(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE
+    )
+
+    """class Meta:
+        constraints = (
+            models.UniqueConstraint(
+                fields=('user', 'author'),
+                name='unique_following'))"""
+
+
+class Favorite(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+    )
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE
+    )
+
+    """class Meta:
+        constraints = (
+            models.UniqueConstraint(
+                fields=('user', 'recipe'),
+                name='unique_favorite'))"""
+
+
+class ShoppingCart(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+    )
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE
+    )
