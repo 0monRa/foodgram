@@ -3,7 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 
-class YaUser(AbstractUser):
+class User(AbstractUser):
 
     ROLE_ADMIN = 'admin'
     ROLE_USER = 'user'
@@ -14,26 +14,30 @@ class YaUser(AbstractUser):
     )
 
     username = models.CharField(
-        verbose_name='Логин',
         max_length=150,
-        unique=True
+        unique=True,
+        verbose_name='Логин',
     )
     first_name = models.CharField(
+        max_length=150,
         verbose_name='Имя',
-        max_length=150
     )
     last_name = models.CharField(
+        max_length=150,
         verbose_name='Фамилия',
-        max_length=150
     )
     email = models.EmailField(
+        unique=True,
         verbose_name='email-адрес',
-        unique=True
+    )
+    password = models.CharField(
+        max_length=128,
+        verbose_name='Пароль'
     )
     role = models.CharField(
-        verbose_name='Пользовательская роль',
         choices=ROLE_CHOICES,
-        default=ROLE_USER
+        default=ROLE_USER,
+        verbose_name='Пользовательская роль',
     )
 
     @property
