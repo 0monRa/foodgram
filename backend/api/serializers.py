@@ -8,12 +8,10 @@ from recipe.models import (
     Tag,
     IngredientsInRecipe,
     ShoppingCart,
+    Follow,
     Favorite
 )
-
-
-class RecipeSerializer(serializers.ModelSerializer):
-    pass
+from users.serializers import UserSerializer
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -41,6 +39,16 @@ class IngredientsInRecipeSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'measurement_unit', 'amount')
 
 
+class RecipeSerializer(serializers.ModelSerializer):
+    author = UserSerializer(read_only=True)
+    ingredients = IngredientsInRecipeSerializer(many=True)
+    tags = TagSerializer(many=True)
+
+    class Meta:
+        model = Recipe
+        fields = '__all__'
+
+
 class FavoriteSerializer(serializers.ModelSerializer):
     name = serializers.ReadOnlyField(
         source='recipe.name',
@@ -58,6 +66,14 @@ class FavoriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Favorite
         fields = ('id', 'name', 'image', 'coocking_time')
+
+
+class FollowSerializer(serializers.ModelSerializer):
+    author = UserSerializer()
+
+    class Meta:
+        model = Follow
+        fields = ('user', 'author')
 
 
 class ShoppingCartSerializer(serializers.ModelSerializer):

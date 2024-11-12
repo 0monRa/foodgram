@@ -73,14 +73,7 @@ class IngredientsInRecipe(models.Model):
     amount = models.PositiveSmallIntegerField('Количество')
 
     class Meta:
-        constraints = (
-            models.UniqueConstraint(
-                fields=('ingredient', 'recipe'),
-                name='unique_ingredient'
-            ),
-        )
-        verbose_name = 'Ингредиенты рецепта'
-        verbose_name_plural = 'Ингредиенты рецептов'
+        unique_together = ('recipe', 'ingredient')
 
     def __str__(self):
         return f'{self.recipe} - {self.ingredient}'
