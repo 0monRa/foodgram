@@ -11,5 +11,6 @@ router.register('ingredients', IngredientViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
-    re_path(r'auth/', include('djoser.urls.authtoken')),
+    path('auth/', include('djoser.urls')),
+    path('auth/', include('djoser.urls.authtoken')),
 ]

@@ -1,129 +1,51 @@
-from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from rest_framework.validators import UniqueTogetherValidator
+from rest_framework import status
+from rest_framework.exceptions import ValidationError
+import re
 
-'''from api_yamdb.constants import (
-    EMAIL_FIELD_LENGTH,
-    USERNAME_FIELD_LENGTH,
-)'''
-
-UserModel = get_user_model()
+from recipe.models import Follow, Recipe
+from users.models import User
 
 
-class _BaseUserSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(
-        max_length=128,
-        required=False
-    )
-
-    def validate_username(self, value):
-        UserModel.username_validator(value)
-        if value == 'me':
-            raise serializers.ValidationError(
-                'Недопустимое имя пользователя!')
-        return value
-
-
-class UserSerializer(_BaseUserSerializer):
-    email = serializers.EmailField(
-        max_length=128,
-        required=False
-    )
-    first_name = serializers.CharField(
-        max_length=128,
-        required=False
-    )
-    last_name = serializers.CharField(
-        max_length=128,
-        required=False
-    )
-    bio = serializers.CharField(
-        max_length=None,
-        required=False
-    )
+class UserSerializer(serializers.ModelSerializer):
+    """
+    Serializer для чтения / создания пользователя модели User.
+    Переопределён метод create для возможности получения токена по
+    кастомным url. - шифрование пароля по правилам djosera.
+    """
+    is_subscribed = serializers.SerializerMethodField()
 
     class Meta:
-        model = UserModel
+        model = User
         fields = (
-            'username',
             'email',
+            'id',
+            'username',
             'first_name',
             'last_name',
-            'bio'
+            'password',
+            'is_subscribed'
         )
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'is_subscribed': {'read_only': True}}
 
+    def get_is_subscribed(self, obj):
+        user = self.context.get('request').user
+        if not user.is_anonymous:
+            return Follow.objects.filter(user=user, author=obj).exists()
+        return False
 
-class AdminSerializer(UserSerializer):
-    username = serializers.CharField(
-        max_length=128,
-        required=True
-    )
-    email = serializers.EmailField(
-        max_length=128,
-        required=True
-    )
-    role = serializers.ChoiceField(
-        required=False,
-        choices=UserModel.ROLE_CHOICES
-    )
-
-    class Meta:
-        model = UserModel
-        fields = (
-            'username',
-            'email',
-            'first_name',
-            'last_name',
-            'bio',
-            'role',
-        )
-
-        validators = [
-            UniqueTogetherValidator(
-                queryset=UserModel.objects.all(),
-                fields=('username', 'email')
-            )
-        ]
-
-
-class SignupSerializer(_BaseUserSerializer):
-    username = serializers.CharField(
-        max_length=128,
-        required=True
-    )
-    email = serializers.EmailField(
-        max_length=128,
-        required=True
-    )
-
-    class Meta:
-        model = UserModel
-        fields = ('username', 'email')
-
-    def validate(self, data):
-        username = data.get('username')
-        email = data.get('email')
-
-        user = self._get_user(email=email)
-        if user and user.username != username:
-            raise serializers.ValidationError(
-                'Email уже используется!')
-
-        user = self._get_user(username=username)
-        if user and user.email != email:
-            raise serializers.ValidationError(
-                'Имя пользователя уже используется!')
-
-        return data
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation.pop('is_subscribed', None)
+        return representation
 
     def create(self, validated_data):
-        user = self._get_user(**validated_data)
-        if not user:
-            user = UserModel.objects.create(**validated_data)
-        return user
+        return User.objects.create_user(**validated_data)
 
-    @staticmethod
-    def _get_user(**kwargs):
-        user = UserModel.objects.filter(**kwargs)
-        if user.exists():
-            return user.first()
+    def validate_username(self, value):
+        if not re.match(r'^[\w.@+-]+$', value):
+            raise serializers.ValidationError("Username must be alphanumeric and can contain only letters, digits, ., @, +, and - characters.")
+        return value
+

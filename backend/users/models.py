@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import RegexValidator
 from django.db import models
 
 
@@ -13,7 +14,12 @@ class User(AbstractUser):
         (ROLE_USER, 'User'),
     )
 
-    username = models.CharField(
+    username_validator = RegexValidator(
+        regex=r'^[\w.@+-]+$',
+        message='Username must be alphanumeric and can contain @, ., +, and - characters.'
+    )
+
+    username = models.TextField(
         max_length=150,
         unique=True,
         verbose_name='Логин',
@@ -27,6 +33,7 @@ class User(AbstractUser):
         verbose_name='Фамилия',
     )
     email = models.EmailField(
+        max_length=254,
         unique=True,
         verbose_name='email-адрес',
     )

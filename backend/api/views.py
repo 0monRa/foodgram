@@ -1,7 +1,8 @@
 from django.shortcuts import render
 from rest_framework import (
     viewsets,
-    mixins
+    mixins,
+    permissions
 )
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -17,6 +18,10 @@ from recipe.models import (
     ShoppingCart
 )
 from users.models import User
+'''from users.permissions import (
+    IsAdminOrReadOnly,
+    IsOwnerOrAdminOrReadOnly
+)'''
 from .serializers import (
     RecipeSerializer,
     TagSerializer,
@@ -30,7 +35,7 @@ from .serializers import (
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
-    #permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    #permission_classes = [IsOwnerOrAdminOrReadOnly]
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -43,6 +48,7 @@ class TagViewSet(
 ):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
+    #permission_classes = [IsAdminOrReadOnly]
 
 
 class IngredientViewSet(
@@ -52,11 +58,12 @@ class IngredientViewSet(
 ):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
+    #permission_classes = [IsAdminOrReadOnly]
 
 
 class FollowViewSet(viewsets.ModelViewSet):
     serializer_class = FollowSerializer
-    #permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         return Follow.objects.filter(user=self.request.user)
@@ -67,7 +74,7 @@ class FollowViewSet(viewsets.ModelViewSet):
 
 class FavoriteViewSet(viewsets.ModelViewSet):
     serializer_class = FavoriteSerializer
-    #permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         return Favorite.objects.filter(user=self.request.user)
@@ -85,7 +92,7 @@ class FavoriteViewSet(viewsets.ModelViewSet):
 
 class ShoppingCartViewSet(viewsets.ModelViewSet):
     serializer_class = ShoppingCartSerializer
-    #permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         return ShoppingCart.objects.filter(user=self.request.user)
