@@ -25,7 +25,7 @@ class Recipe(models.Model):
         through_fields=('recipe', 'ingredient'),
         verbose_name='Ингредиенты'
     )
-    tag = models.ManyToManyField(
+    tags = models.ManyToManyField(
         'Tag',
         verbose_name='Тег'
     )
@@ -46,7 +46,7 @@ class Tag(models.Model):
 
 
 class Ingredient(models.Model):
-    title = models.CharField(
+    name = models.CharField(
         max_length=256,
         unique=True,
         verbose_name='Название ингредиента'
@@ -62,18 +62,20 @@ class IngredientsInRecipe(models.Model):
         Recipe,
         on_delete=models.CASCADE,
         related_name='ingredient_in_recipe',
-        verbose_name='Ингредиенты'
+        verbose_name='Рецепты'
     )
     ingredient = models.ForeignKey(
         Ingredient,
         on_delete=models.CASCADE,
         related_name='ingredients_list',
-        verbose_name='Рецепты'
+        verbose_name='Ингридиенты'
     )
     amount = models.PositiveSmallIntegerField('Количество')
 
     class Meta:
-        unique_together = ('recipe', 'ingredient')
+        constraints = [
+            models.UniqueConstraint(fields=['recipe', 'ingredient'], name='unique_recipe_ingredient')
+        ]
 
     def __str__(self):
         return f'{self.recipe} - {self.ingredient}'
@@ -91,12 +93,6 @@ class Follow(models.Model):
         related_name='following'
     )
 
-    """class Meta:
-        constraints = (
-            models.UniqueConstraint(
-                fields=('user', 'author'),
-                name='unique_following'))"""
-
 
 class Favorite(models.Model):
     user = models.ForeignKey(
@@ -107,12 +103,6 @@ class Favorite(models.Model):
         Recipe,
         on_delete=models.CASCADE
     )
-
-    """class Meta:
-        constraints = (
-            models.UniqueConstraint(
-                fields=('user', 'recipe'),
-                name='unique_favorite'))"""
 
 
 class ShoppingCart(models.Model):

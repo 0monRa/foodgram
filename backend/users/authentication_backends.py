@@ -5,9 +5,6 @@ User = get_user_model()
 
 
 class EmailBackend(ModelBackend):
-    """
-    Кастомный бэкенд для аутентификации через email.
-    """
     def authenticate(self, request, username=None, password=None, **kwargs):
         email = kwargs.get('email') or username
         try:

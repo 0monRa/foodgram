@@ -47,6 +47,12 @@ class User(AbstractUser):
         max_length=50,
         verbose_name='Пользовательская роль',
     )
+    avatar = models.ImageField(
+        upload_to='users/avatars/',
+        blank=True,
+        null=True,
+        default='users/avatars/default_avatar.jpg',
+    )
 
     @property
     def is_user(self):

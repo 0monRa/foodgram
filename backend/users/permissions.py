@@ -56,3 +56,23 @@ class CustomReviewCommentPermission(BasePermission):
             return True
 
         return obj.author == request.user
+
+
+class IsAdminOrReadOnly(BasePermission):
+    """
+    Разрешение для администраторов на полный доступ и только на чтение для других.
+    """
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return True
+        return request.user and request.user.is_staff
+
+
+class IsOwnerOrAdminOrReadOnly(BasePermission):
+    """
+    Разрешение для владельцев объекта и администраторов на изменение объекта.
+    """
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS:
+            return True
+        return obj.author == request.user or request.user.is_staff
