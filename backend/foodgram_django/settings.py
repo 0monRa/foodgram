@@ -6,19 +6,13 @@ load_dotenv()
 
 AUTH_USER_MODEL = 'users.User'
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-l%hdb75yzq6-fp7obz-8ad$s9p5(_)j$d)peqtmue!bkx7y6_j'
+SECRET_KEY = os.getenv('SECRET_KEY', default='token')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = []
-
-
-# Application definition
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', default='127.0.0.1,localhost').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
