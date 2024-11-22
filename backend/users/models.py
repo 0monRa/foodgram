@@ -16,7 +16,7 @@ class User(AbstractUser):
 
     username_validator = RegexValidator(
         regex=r'^[\w.@+-]+$',
-        message='Username must be alphanumeric and can contain @, ., +, and - characters.'
+        message='Use only contain @, ., +, and - characters.'
     )
 
     username = models.TextField(

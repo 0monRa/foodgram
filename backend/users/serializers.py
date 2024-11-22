@@ -5,7 +5,7 @@ import re
 from django.conf import settings
 
 from foodgram_django.fields import Base64ImageField
-from recipe.models import Follow, Recipe
+from recipe.models import Follow
 from users.models import User
 
 
@@ -31,6 +31,8 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_is_subscribed(self, obj):
         request = self.context.get('request')
+        if request is None or not hasattr(request, 'user'):
+            return False
         user = request.user
         if user.is_authenticated:
             return Follow.objects.filter(user=user, author=obj).exists()
@@ -64,6 +66,6 @@ class UserCreateSerializer(serializers.ModelSerializer):
     def validate_username(self, value):
         if not re.match(r'^[\w.@+-]+$', value):
             raise serializers.ValidationError(
-                'Username must be alphanumeric and can contain only letters, digits, ., @, +, and - characters.'
+                'Use only letters, digits, ., @, +, and - characters.'
             )
         return value

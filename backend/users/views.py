@@ -1,16 +1,20 @@
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
-from rest_framework import status, viewsets, views, filters
+from rest_framework import status, viewsets, filters
 from rest_framework.decorators import action, api_view
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import (
+    IsAuthenticated,
+    AllowAny,
+    IsAuthenticated
+)
 from rest_framework_simplejwt.tokens import RefreshToken
 from api.paginations import CustomPageNumberPagination
+from api.serializers import SubscribeSerializer
+from recipe.models import Follow
 
 from .serializers import UserSerializer, UserCreateSerializer
-from .permissions import AdministratorPermission, AuthenticatedPermission
+from .permissions import AdministratorPermission
 
 User = get_user_model()
 
@@ -41,7 +45,6 @@ class UserViewSet(viewsets.ModelViewSet):
         return UserSerializer
 
     def get_serializer_context(self):
-        """Передаем контекст запроса в сериализатор."""
         return {'request': self.request}
 
     def create(self, request, *args, **kwargs):
@@ -53,9 +56,12 @@ class UserViewSet(viewsets.ModelViewSet):
         headers = self.get_success_headers(serializer.data)
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
-    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[IsAuthenticated]
+    )
     def me(self, request):
-        """Эндпоинт для получения данных текущего пользователя."""
         user = request.user
         serializer = self.get_serializer(user)
         return Response(serializer.data)
@@ -68,7 +74,6 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def avatar(self, request):
         user = request.user
-
         if request.method == 'PUT':
             avatar_data = request.data.get('avatar')
             if not avatar_data:
@@ -76,7 +81,6 @@ class UserViewSet(viewsets.ModelViewSet):
                     {'detail': 'Поле avatar обязательно для заполнения.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-
             serializer = self.get_serializer(
                 user,
                 data={'avatar': avatar_data},
@@ -84,14 +88,11 @@ class UserViewSet(viewsets.ModelViewSet):
             )
             serializer.is_valid(raise_exception=True)
             serializer.save()
-
             return Response(
                 {'avatar': avatar_data},
                 status=status.HTTP_200_OK
             )
-
         elif request.method == 'DELETE':
-            # Удаление аватара
             user.avatar.delete(save=True)
             return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -107,18 +108,16 @@ class UserViewSet(viewsets.ModelViewSet):
 
         if not current_password or not new_password:
             return Response(
-                {"detail": "Оба поля 'current_password' и 'new_password' обязательны."},
+                {"detail": "'current_password' и 'new_password' обязательны."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Проверяем текущий пароль
         if not user.check_password(current_password):
             return Response(
                 {"detail": "Неверный текущий пароль."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Устанавливаем новый пароль
         user.set_password(new_password)
         user.save()
 
@@ -127,17 +126,92 @@ class UserViewSet(viewsets.ModelViewSet):
             status=status.HTTP_204_NO_CONTENT
         )
 
+    @action(
+        detail=True,
+        methods=['post', 'delete'],
+        permission_classes=[IsAuthenticated],
+        url_path='subscribe'
+    )
+    def subscribe(self, request, id=None):
+        user = request.user
+        author = get_object_or_404(User, id=id)
+        if user == author:
+            return Response(
+                {"detail": "Нельзя подписаться на самого себя."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if request.method == 'POST':
+            if Follow.objects.filter(user=user, author=author).exists():
+                return Response(
+                    {"detail": "Вы уже подписаны на этого пользователя."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            Follow.objects.create(user=user, author=author)
+            serializer = SubscribeSerializer(
+                author,
+                context={'request': request}
+            )
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        elif request.method == 'DELETE':
+            follow = Follow.objects.filter(user=user, author=author)
+            if not follow.exists():
+                return Response(
+                    {"detail": "Вы не подписаны на этого пользователя."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            follow.delete()
+            return Response(
+                {"detail": f"Вы успешно отписались от {author.username}."},
+                status=status.HTTP_204_NO_CONTENT
+            )
+
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[IsAuthenticated]
+    )
+    def subscriptions(self, request):
+        user = request.user
+        follows = Follow.objects.filter(user=user).select_related('author')
+        page = self.paginate_queryset(follows)
+        authors = [follow.author for follow in page]
+
+        if page is not None:
+            serializer = SubscribeSerializer(
+                authors,
+                many=True,
+                context={'request': request}
+            )
+            return self.get_paginated_response(serializer.data)
+
+        serializer = SubscribeSerializer(
+            authors,
+            many=True,
+            context={'request': request}
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 @api_view(['POST'])
 def auth_token(request):
-    """Эндпоинт для получения токена аутентификации."""
     email = request.data.get('email')
     password = request.data.get('password')
     user = get_object_or_404(User, email=email)
 
     if not user.check_password(password):
-        return Response({"detail": "Неверные учетные данные."},
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "detail": "Неверные учетные данные."
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     refresh = RefreshToken.for_user(user)
-    return Response({'token': str(refresh.access_token)}, status=status.HTTP_200_OK)
+    return Response(
+        {
+            'token': str(refresh.access_token)
+        },
+        status=status.HTTP_200_OK
+    )
