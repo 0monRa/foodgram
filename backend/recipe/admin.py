@@ -4,8 +4,17 @@ from .models import Recipe, Tag, Ingredient
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'author', 'favorites_count')
-    search_fields = ('name', 'author__username', 'author__email')
+    list_display = (
+        'id',
+        'name',
+        'author',
+        'favorites_count'
+    )
+    search_fields = (
+        'name',
+        'author__username',
+        'author__email'
+    )
     list_filter = ('tags',)
     ordering = ('id',)
 
@@ -16,13 +25,21 @@ class RecipeAdmin(admin.ModelAdmin):
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'slug')
+    list_display = (
+        'id',
+        'name',
+        'slug'
+    )
     search_fields = ('name',)
     ordering = ('id',)
 
 
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'measurement_unit')
+    list_display = (
+        'id',
+        'name',
+        'measurement_unit'
+    )
     search_fields = ('title',)
     ordering = ('id',)

@@ -6,7 +6,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import (
     IsAuthenticated,
     AllowAny,
-    IsAuthenticated
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 from api.paginations import CustomPageNumberPagination
@@ -50,8 +49,8 @@ class UserViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-        refresh = RefreshToken.for_user(user)
+        serializer.save()
+        RefreshToken.for_user(serializer.instance)
         data = serializer.data
         headers = self.get_success_headers(serializer.data)
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
@@ -103,18 +102,18 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def set_password(self, request):
         user = request.user
-        current_password = request.data.get("current_password")
-        new_password = request.data.get("new_password")
+        current_password = request.data.get('current_password')
+        new_password = request.data.get('new_password')
 
         if not current_password or not new_password:
             return Response(
-                {"detail": "'current_password' и 'new_password' обязательны."},
+                {'detail': 'current_password и new_password обязательны.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         if not user.check_password(current_password):
             return Response(
-                {"detail": "Неверный текущий пароль."},
+                {'detail': 'Неверный текущий пароль.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -122,7 +121,7 @@ class UserViewSet(viewsets.ModelViewSet):
         user.save()
 
         return Response(
-            {"detail": "Пароль успешно обновлен."},
+            {'detail': 'Пароль успешно обновлен.'},
             status=status.HTTP_204_NO_CONTENT
         )
 
@@ -137,13 +136,13 @@ class UserViewSet(viewsets.ModelViewSet):
         author = get_object_or_404(User, id=id)
         if user == author:
             return Response(
-                {"detail": "Нельзя подписаться на самого себя."},
+                {'detail': 'Нельзя подписаться на самого себя.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         if request.method == 'POST':
             if Follow.objects.filter(user=user, author=author).exists():
                 return Response(
-                    {"detail": "Вы уже подписаны на этого пользователя."},
+                    {'detail': 'Вы уже подписаны на этого пользователя.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
@@ -158,12 +157,12 @@ class UserViewSet(viewsets.ModelViewSet):
             follow = Follow.objects.filter(user=user, author=author)
             if not follow.exists():
                 return Response(
-                    {"detail": "Вы не подписаны на этого пользователя."},
+                    {'detail': 'Вы не подписаны на этого пользователя.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             follow.delete()
             return Response(
-                {"detail": f"Вы успешно отписались от {author.username}."},
+                {'detail': f'Вы успешно отписались от {author.username}.'},
                 status=status.HTTP_204_NO_CONTENT
             )
 
@@ -203,7 +202,7 @@ def auth_token(request):
     if not user.check_password(password):
         return Response(
             {
-                "detail": "Неверные учетные данные."
+                'detail': 'Неверные учетные данные.'
             },
             status=status.HTTP_400_BAD_REQUEST
         )

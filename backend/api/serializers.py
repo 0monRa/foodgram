@@ -1,16 +1,17 @@
 from rest_framework import serializers
+
 from foodgram_django.fields import Base64ImageField
 from recipe.models import (
-    Recipe,
-    Ingredient,
-    Tag,
-    IngredientsInRecipe,
-    ShoppingCart,
+    Favorite,
     Follow,
-    Favorite
+    Ingredient,
+    IngredientsInRecipe,
+    Recipe,
+    ShoppingCart,
+    Tag
 )
-from users.serializers import UserSerializer
 from users.models import User
+from users.serializers import UserSerializer
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -51,7 +52,7 @@ class IngredientsInRecipeSerializer(serializers.ModelSerializer):
     def validate_amount(self, value):
         if value < 1:
             raise serializers.ValidationError(
-                "Количество ингредиента должно быть больше 0."
+                'Количество ингредиента должно быть больше 0.'
             )
         return value
 
@@ -146,44 +147,47 @@ class RecipeSerializer(serializers.ModelSerializer):
             if tag in unique_tags:
                 raise serializers.ValidationError(
                     {
-                        "tags": "Теги не должны повторяться."
+                        'tags': 'Теги не должны повторяться.'
                     }
                 )
             unique_tags.add(tag)
         if not tags:
             raise serializers.ValidationError(
                 {
-                    "tags": "Поле 'tags' не может быть пустым."
+                    'tags': 'Поле \'tags\' не может быть пустым.'
                 }
             )
         if len(tags) != len(set(tags)):
             raise serializers.ValidationError(
                 {
-                    "tags": "Теги не должны повторяться."
+                    'tags': 'Теги не должны повторяться.'
                 }
             )
         if not ingredients:
             raise serializers.ValidationError(
                 {
-                    "ingredients": "Список ингредиентов не может быть пустым."
+                    'ingredients': 'Список ингредиентов не может быть пустым.'
                 }
             )
         for ingredient in ingredients:
             if ingredient['id'] in unique_ingredients:
                 raise serializers.ValidationError(
-                    {"ingredients": "Ингредиенты в рецепте не должны повторяться."}
+                    {'ingredients': (
+                        'Ингредиенты в рецепте не должны повторяться.'
+                    )
+                    }
                 )
             unique_ingredients.add(ingredient['id'])
         if not ingredients:
             raise serializers.ValidationError(
-                {"ingredients": "Список ингредиентов не может быть пустым."}
+                {'ingredients': 'Список ингредиентов не может быть пустым.'}
             )
         return data
 
     def validate_cooking_time(self, value):
         if value < 1:
             raise serializers.ValidationError(
-                "Время приготовления должно быть больше или равно 1."
+                'Время приготовления должно быть больше или равно 1.'
             )
         return value
 
@@ -204,6 +208,12 @@ class FollowSerializer(serializers.ModelSerializer):
         fields = ('user', 'author')
 
 
+class SubscriptionRecipeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
+
+
 class SubscribeSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
@@ -212,15 +222,15 @@ class SubscribeSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
+            'email',
             'id',
             'username',
             'first_name',
             'last_name',
-            'email',
             'is_subscribed',
-            'avatar',
             'recipes',
-            'recipes_count'
+            'recipes_count',
+            'avatar'
         )
 
     def get_is_subscribed(self, obj):
@@ -242,7 +252,7 @@ class SubscribeSerializer(serializers.ModelSerializer):
                 recipes = recipes[:recipes_limit]
             except ValueError:
                 pass
-        serializer = RecipeSerializer(
+        serializer = SubscriptionRecipeSerializer(
             recipes,
             many=True,
             context={'request': request}

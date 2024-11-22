@@ -1,9 +1,7 @@
-from rest_framework import serializers
-from rest_framework import status
-from rest_framework.exceptions import ValidationError
 import re
-from django.conf import settings
+from rest_framework import serializers
 
+from django.conf import settings
 from foodgram_django.fields import Base64ImageField
 from recipe.models import Follow
 from users.models import User
