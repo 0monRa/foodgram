@@ -214,6 +214,13 @@ class IngredientViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'head', 'options']
     permission_classes = (permissions.AllowAny, )
 
+    def get_queryset(self):
+        queryset = Ingredient.objects.all()
+        name = self.request.query_params.get('name')
+        if name:
+            queryset = queryset.filter(name__istartswith=name)
+        return queryset
+
 
 class FollowViewSet(viewsets.ModelViewSet):
     serializer_class = FollowSerializer
