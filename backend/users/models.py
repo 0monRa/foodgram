@@ -63,7 +63,7 @@ class User(AbstractUser):
         return self.role == self.ROLE_ADMIN
 
     def clean(self):
-        if self.is_superuser and self.is_admin:
+        if self._state.adding and self.is_superuser and self.is_admin:
             raise ValidationError('Суперпользователь — всегда администратор!')
 
     def save(self, *args, **kwargs):

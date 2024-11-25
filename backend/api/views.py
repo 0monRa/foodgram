@@ -66,7 +66,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return Response(
             {
                 'short-link': (
-                    f'http://{request.get_host()}/api/recipes/{recipe.id}/'
+                    f'http://{request.get_host()}/recipes/{recipe.id}/'
                 )
             },
             status=status.HTTP_200_OK
