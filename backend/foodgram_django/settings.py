@@ -111,7 +111,7 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-STATIC_ROOT = '/app/static'
+STATIC_ROOT = '/static'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = '/app/media'
