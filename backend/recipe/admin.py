@@ -18,6 +18,10 @@ class RecipeAdmin(admin.ModelAdmin):
     list_filter = ('tags',)
     ordering = ('id',)
 
+    def tags_list(self, obj):
+        return ', '.join(tag.name for tag in obj.tags.all())
+    tags_list.short_description = 'Теги'
+
     def favorites_count(self, obj):
         return obj.favorites.count()
     favorites_count.short_description = 'Добавлено в избранное'
@@ -41,5 +45,5 @@ class IngredientAdmin(admin.ModelAdmin):
         'name',
         'measurement_unit'
     )
-    search_fields = ('title',)
+    search_fields = ('name',)
     ordering = ('id',)
