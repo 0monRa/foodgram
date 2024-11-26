@@ -13,7 +13,7 @@ class Recipe(models.Model):
         verbose_name='Название рецепта'
     )
     image = models.ImageField(
-        upload_to='media/',  # Находится в settings.py
+        upload_to='media/',
         verbose_name='Изображение рецепта'
     )
     text = models.TextField(

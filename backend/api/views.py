@@ -215,7 +215,7 @@ class IngredientViewSet(viewsets.ModelViewSet):
     permission_classes = (permissions.AllowAny, )
 
     def get_queryset(self):
-        queryset = Ingredient.objects.all()
+        queryset = self.queryset
         name = self.request.query_params.get('name')
         if name:
             queryset = queryset.filter(name__istartswith=name)
