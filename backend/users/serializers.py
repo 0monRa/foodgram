@@ -1,7 +1,6 @@
 import re
 from rest_framework import serializers
 
-from django.conf import settings
 from foodgram_django.fields import Base64ImageField
 from recipe.models import Follow
 from users.models import User
