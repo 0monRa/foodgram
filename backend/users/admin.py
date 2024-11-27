@@ -1,40 +1,19 @@
 from django.contrib import admin
-from django import forms
+from django.contrib.auth.admin import UserAdmin as DefaultUserAdmin
+
 from .models import User
 
 
-class UserChangeForm(forms.ModelForm):
-    password = forms.CharField(
-        label="Новый пароль",
-        required=False,
-        widget=forms.PasswordInput
+@admin.register(User)
+class UserAdmin(DefaultUserAdmin):
+    """Кастомизация админки для модели User."""
+    model = User
+    # Добавляем кастомные поля, если они есть
+    fieldsets = DefaultUserAdmin.fieldsets + (
+        ('Дополнительные поля', {'fields': ('role',)}),
     )
 
-    class Meta:
-        model = User
-        fields = (
-            'username',
-            'email',
-            'first_name',
-            'last_name',
-            'is_staff',
-            'is_active',
-            'role',
-        )
-
-    def save(self, commit=True):
-        user = super().save(commit=False)
-        new_password = self.cleaned_data.get('password')
-        if new_password:
-            user.set_password(new_password)
-        if commit:
-            user.save()
-        return user
-
-
-@admin.register(User)
-class UserAdmin(admin.ModelAdmin):
-    form = UserChangeForm
+    # Настраиваем отображение в списке
     list_display = (
         'id',
         'username',
@@ -43,14 +22,8 @@ class UserAdmin(admin.ModelAdmin):
         'last_name',
         'is_staff',
         'is_active',
+        'role',
     )
-    search_fields = (
-        'username',
-        'email'
-    )
-    list_filter = (
-        'is_staff',
-        'is_superuser',
-        'is_active'
-    )
+    search_fields = ('username', 'email', 'first_name', 'last_name')
+    list_filter = ('is_staff', 'is_active', 'role')
     ordering = ('id',)

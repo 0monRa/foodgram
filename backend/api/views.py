@@ -1,3 +1,6 @@
+from io import BytesIO
+
+from django.db.models import Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -5,12 +8,11 @@ from rest_framework import (
     viewsets,
     permissions,
     status,
-    serializers
 )
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from foodgram_django.filters import RecipeFilter
+from .filters import RecipeFilter, IngredientFilter
 from recipe.models import (
     Recipe,
     Tag,
@@ -29,11 +31,17 @@ from .serializers import (
     FavoriteSerializer,
     FollowSerializer,
 )
+
 from .paginations import CustomPageNumberPagination
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
-    queryset = Recipe.objects.all().order_by('-id')
+    queryset = Recipe.objects.all().select_related(
+        'author'
+    ).prefetch_related(
+        'tags',
+        'ingredients'
+    ).order_by('-id')
     serializer_class = RecipeSerializer
     permission_classes = [
         permissions.IsAuthenticatedOrReadOnly,
@@ -44,15 +52,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filterset_class = RecipeFilter
 
     def perform_create(self, serializer):
-        if not self.request.user.is_authenticated:
-            raise serializers.ValidationError(
-                {
-                    'detail': (
-                        'Только авторизованные пользователи '
-                        'могут создавать рецепты.'
-                    )
-                }
-            )
         serializer.save(author=self.request.user)
 
     @action(
@@ -102,40 +101,34 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @add_to_shopping_cart.mapping.delete
     def remove_from_shopping_cart(self, request, pk=None):
-        recipe = get_object_or_404(Recipe, id=pk)
-        cart_item = ShoppingCart.objects.filter(
+        cart_item, _ = ShoppingCart.objects.filter(
             user=request.user,
-            recipe=recipe
-        )
-        if not cart_item.exists():
+            recipe_id=pk
+        ).delete()
+        if cart_item == 0:
+            if not Recipe.objects.filter(id=pk).exists():
+                return Response(
+                    {'detail': 'Рецепт не найден.'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
             return Response(
                 {'detail': 'Рецепта нет в корзине.'},
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_400_BAD_REQUEST
             )
-        cart_item.delete()
         return Response(
             {'detail': 'Рецепт удалён из корзины.'},
             status=status.HTTP_204_NO_CONTENT
         )
 
-    @action(
-        detail=False,
-        methods=['get'],
-        permission_classes=[permissions.AllowAny]
-    )
-    def download_shopping_cart(self, request):
+    def generate_shopping_list(self, user):
         items = ShoppingCart.objects.filter(
-            user=request.user
+            user=user
         ).select_related('recipe')
 
         if not items.exists():
-            return Response(
-                {'detail': 'Корзина покупок пуста.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return None, 'Корзина покупок пуста.'
 
         ingredients = {}
-
         for item in items:
             for ingredient_in_recipe in item.recipe.ingredient_in_recipe.all():
                 ingredient = ingredient_in_recipe.ingredient
@@ -154,7 +147,25 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 f"{name} — {details['amount']} {details['measurement_unit']}\n"
             )
 
-        response = HttpResponse(content, content_type='text/plain')
+        buffer = BytesIO()
+        buffer.write(content.encode('utf-8'))
+        buffer.seek(0)
+        return buffer, None
+
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[permissions.AllowAny]
+    )
+    def download_shopping_cart(self, request):
+        buffer, error = self.generate_shopping_list(request.user)
+        if error:
+            return Response(
+                {'detail': error},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        response = HttpResponse(buffer, content_type='text/plain')
         response['Content-Disposition'] = (
             'attachment; filename="shopping_cart.txt"'
         )
@@ -187,14 +198,20 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @favorite.mapping.delete
     def remove_favorite(self, request, pk=None):
-        recipe = get_object_or_404(Recipe, id=pk)
-        favorite = Favorite.objects.filter(user=request.user, recipe=recipe)
-        if not favorite.exists():
+        favorite, _ = Favorite.objects.filter(
+            user=request.user,
+            recipe_id=pk
+        ).delete()
+        if favorite == 0:
+            if not Recipe.objects.filter(id=pk).exists():
+                return Response(
+                    {'detail': 'Рецепт не найден.'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
             return Response(
                 {'detail': 'Рецепта нет в избранном.'},
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_400_BAD_REQUEST
             )
-        favorite.delete()
         return Response(
             {'detail': 'Рецепт удалён из избранного.'},
             status=status.HTTP_204_NO_CONTENT
@@ -213,13 +230,11 @@ class IngredientViewSet(viewsets.ModelViewSet):
     serializer_class = IngredientSerializer
     http_method_names = ['get', 'head', 'options']
     permission_classes = (permissions.AllowAny, )
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = IngredientFilter
 
     def get_queryset(self):
-        queryset = self.queryset
-        name = self.request.query_params.get('name')
-        if name:
-            queryset = queryset.filter(name__istartswith=name)
-        return queryset
+        return self.queryset
 
 
 class FollowViewSet(viewsets.ModelViewSet):
@@ -227,7 +242,9 @@ class FollowViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Follow.objects.filter(user=self.request.user)
+        return Follow.objects.filter(user=self.request.user).annotate(
+            recipes_count=Count('author__recipes')
+        )
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

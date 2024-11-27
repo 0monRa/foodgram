@@ -13,6 +13,7 @@ from api.serializers import SubscribeSerializer
 from recipe.models import Follow
 
 from .serializers import UserSerializer, UserCreateSerializer
+
 from .permissions import AdministratorPermission
 
 User = get_user_model()
@@ -45,15 +46,6 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def get_serializer_context(self):
         return {'request': self.request}
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        RefreshToken.for_user(serializer.instance)
-        data = serializer.data
-        headers = self.get_success_headers(serializer.data)
-        return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
     @action(
         detail=False,
@@ -133,13 +125,13 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def subscribe(self, request, id=None):
         user = request.user
-        author = get_object_or_404(User, id=id)
-        if user == author:
-            return Response(
-                {'detail': 'Нельзя подписаться на самого себя.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
         if request.method == 'POST':
+            author = get_object_or_404(User, id=id)
+            if user == author:
+                return Response(
+                    {'detail': 'Нельзя подписаться на самого себя.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             if Follow.objects.filter(user=user, author=author).exists():
                 return Response(
                     {'detail': 'Вы уже подписаны на этого пользователя.'},
@@ -154,15 +146,19 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         elif request.method == 'DELETE':
-            follow = Follow.objects.filter(user=user, author=author)
-            if not follow.exists():
+            follow, _ = Follow.objects.filter(user=user, author_id=id).delete()
+            if follow == 0:
+                if not User.objects.filter(id=id).exists():
+                    return Response(
+                        {'detail': 'Страница не найдена.'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
                 return Response(
                     {'detail': 'Вы не подписаны на этого пользователя.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            follow.delete()
             return Response(
-                {'detail': f'Вы успешно отписались от {author.username}.'},
+                {'detail': 'Вы успешно отписались.'},
                 status=status.HTTP_204_NO_CONTENT
             )
 

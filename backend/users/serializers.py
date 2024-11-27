@@ -1,13 +1,12 @@
 import re
 from rest_framework import serializers
 
-from foodgram_django.fields import Base64ImageField
+from api.fields import Base64ImageField
 from recipe.models import Follow
 from users.models import User
 
 
 class UserSerializer(serializers.ModelSerializer):
-    is_subscribed = serializers.SerializerMethodField()
     avatar = Base64ImageField(required=False)
 
     class Meta:
@@ -58,7 +57,11 @@ class UserCreateSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
-        return User.objects.create_user(**validated_data)
+        password = validated_data.pop('password')
+        user = User(**validated_data)
+        user.set_password(password)
+        user.save()
+        return user
 
     def validate_username(self, value):
         if not re.match(r'^[\w.@+-]+$', value):

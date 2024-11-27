@@ -14,6 +14,9 @@ class User(AbstractUser):
         (ROLE_USER, 'User'),
     )
 
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username']
+
     username_validator = RegexValidator(
         regex=r'^[\w.@+-]+$',
         message='Use only contain @, ., +, and - characters.'
@@ -53,6 +56,15 @@ class User(AbstractUser):
         null=True,
         default='users/avatars/default_avatar.jpg',
     )
+    is_subscribed = models.BooleanField(
+        verbose_name='Подписка',
+        default=False,
+    )
+
+    class Meta:
+        verbose_name = 'пользователь'
+        verbose_name_plural = 'Пользователи'
+        ordering = ('username',)
 
     @property
     def is_user(self):
@@ -60,7 +72,7 @@ class User(AbstractUser):
 
     @property
     def is_admin(self):
-        return self.role == self.ROLE_ADMIN
+        return self.role == self.ROLE_ADMIN or self.is_superuser
 
     def clean(self):
         if self._state.adding and self.is_superuser and self.is_admin:
@@ -69,12 +81,7 @@ class User(AbstractUser):
     def save(self, *args, **kwargs):
         if self.is_superuser:
             self.role = self.ROLE_ADMIN
-        super().save(*args, **kwargs)
-
-    class Meta:
-        verbose_name = 'пользователь'
-        verbose_name_plural = 'Пользователи'
-        ordering = ('username',)
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return self.username

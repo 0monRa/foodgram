@@ -1,5 +1,5 @@
 from django_filters import rest_framework as filters
-from recipe.models import Recipe, Tag
+from recipe.models import Recipe, Ingredient, Tag
 
 
 class RecipeFilter(filters.FilterSet):
@@ -23,8 +23,8 @@ class RecipeFilter(filters.FilterSet):
         user = self.request.user
         if user.is_authenticated:
             if value:
-                return queryset.filter(shoppingcart__user=user)
-            return queryset.exclude(shoppingcart__user=user)
+                return queryset.filter(in_shopping_carts__user=user)
+            return queryset.exclude(in_shopping_carts__user=user)
         return queryset.none()
 
     def filter_is_favorited(self, queryset, name, value):
@@ -34,3 +34,11 @@ class RecipeFilter(filters.FilterSet):
                 return queryset.filter(favorites__user=user)
             return queryset.exclude(favorites__user=user)
         return queryset.none()
+
+
+class IngredientFilter(filters.FilterSet):
+    name = filters.CharFilter(lookup_expr='istartswith')
+
+    class Meta:
+        model = Ingredient
+        fields = ['name']

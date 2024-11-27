@@ -5,6 +5,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+PAG_PAGE_SIZE = 6
+MIN_TIME_FOR_COOKING = 1
+
 AUTH_USER_MODEL = 'users.User'
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -60,8 +63,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'foodgram_django.wsgi.application'
-
-# Database
+'''
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -72,8 +74,14 @@ DATABASES = {
         'PORT': os.getenv('DB_PORT', 5432)
     }
 }
+'''
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
 
-# Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -90,7 +98,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
@@ -102,14 +109,13 @@ USE_L10N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATIC_ROOT = '/static'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = '/app/media'
 
-# Default primary key field type
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
@@ -126,14 +132,16 @@ REST_FRAMEWORK = {
 
 DJOSER = {
     'LOGIN_FIELD': 'email',
+    'USER_ID_FIELD': 'id',
     'USER_CREATE_PASSWORD_RETYPE': True,
     'SERIALIZERS': {
         'user': 'users.serializers.UserSerializer',
+        'user_create': 'users.serializers.UserCreateSerializer',
         'current_user': 'users.serializers.UserSerializer',
+        'set_password': 'djoser.serializers.SetPasswordSerializer',
     },
 }
 
 AUTHENTICATION_BACKENDS = [
-    'users.authentication_backends.EmailBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
