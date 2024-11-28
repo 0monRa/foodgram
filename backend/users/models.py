@@ -55,7 +55,7 @@ class User(AbstractUser):
         upload_to='users/avatars/',
         blank=True,
         null=True,
-        default={settings.BASE_DIR} / '/static/media/userpic-icon.jpg',
+        default=settings.BASE_DIR / '/static/media/userpic-icon.jpg',
     )
     is_subscribed = models.BooleanField(
         verbose_name='Подписка',
