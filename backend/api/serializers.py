@@ -179,7 +179,8 @@ class FavoriteSerializer(serializers.ModelSerializer):
 
 
 class FollowSerializer(serializers.ModelSerializer):
-    author = UserSerializer(read_only=True)
+    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    author = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
 
     class Meta:
         model = Follow

@@ -9,7 +9,7 @@ from rest_framework.permissions import (
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 from api.paginations import CustomPageNumberPagination
-from api.serializers import SubscribeSerializer
+from api.serializers import SubscribeSerializer, FollowSerializer
 from recipe.models import Follow
 
 from .serializers import UserSerializer, UserCreateSerializer
@@ -138,12 +138,18 @@ class UserViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            Follow.objects.create(user=user, author=author)
-            serializer = SubscribeSerializer(
+            data = {'user': user.id, 'author': author.id}
+            serializer = FollowSerializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            response_serializer = SubscribeSerializer(
                 author,
                 context={'request': request}
             )
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(
+                response_serializer.data,
+                status=status.HTTP_201_CREATED
+            )
 
         elif request.method == 'DELETE':
             follow, _ = Follow.objects.filter(user=user, author_id=id).delete()
