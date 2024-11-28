@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
 from django.db import models
+from django.conf import settings
 
 
 class User(AbstractUser):
@@ -54,7 +55,7 @@ class User(AbstractUser):
         upload_to='users/avatars/',
         blank=True,
         null=True,
-        default='users/avatars/default_avatar.jpg',
+        default={settings.BASE_DIR} / '/static/media/userpic-icon.jpg',
     )
     is_subscribed = models.BooleanField(
         verbose_name='Подписка',
