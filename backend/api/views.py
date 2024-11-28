@@ -1,6 +1,6 @@
 from io import BytesIO
 
-from django.db.models import Count
+from django.db.models import Count, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -121,30 +121,25 @@ class RecipeViewSet(viewsets.ModelViewSet):
         )
 
     def generate_shopping_list(self, user):
-        items = ShoppingCart.objects.filter(
-            user=user
-        ).select_related('recipe')
+        ingredients = (
+            Ingredient.objects.filter(
+                recipes__in_shopping_carts__user=user
+            ).values(
+                'name',
+                'measurement_unit'
+            ).annotate(
+                total_amount=Sum('ingredients_list__amount')
+            ).order_by('name')
+        )
 
-        if not items.exists():
+        if not ingredients.exists():
             return None, 'Корзина покупок пуста.'
 
-        ingredients = {}
-        for item in items:
-            for ingredient_in_recipe in item.recipe.ingredient_in_recipe.all():
-                ingredient = ingredient_in_recipe.ingredient
-                amount = ingredient_in_recipe.amount
-                if ingredient.name in ingredients:
-                    ingredients[ingredient.name]['amount'] += amount
-                else:
-                    ingredients[ingredient.name] = {
-                        'amount': amount,
-                        'measurement_unit': ingredient.measurement_unit,
-                    }
-
         content = 'Список покупок:\n'
-        for name, details in ingredients.items():
+        for ingredient in ingredients:
             content += (
-                f"{name} — {details['amount']} {details['measurement_unit']}\n"
+                f"{ingredient['name']} — {ingredient['total_amount']} "
+                f"{ingredient['measurement_unit']}\n"
             )
 
         buffer = BytesIO()
@@ -242,7 +237,9 @@ class FollowViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Follow.objects.filter(user=self.request.user).annotate(
+        return Follow.objects.filter(user=self.request.user).select_related(
+            'author'
+        ).annotate(
             recipes_count=Count('author__recipes')
         )
 
@@ -262,7 +259,7 @@ class FavoriteViewSet(viewsets.ModelViewSet):
         recipe = get_object_or_404(Recipe, pk=pk)
         if request.method == 'POST':
             Favorite.objects.create(user=request.user, recipe=recipe)
-            return Response({'status': 'added to favorites'})
+            return Response({'status': 'Рецепт добавлен в избранное'})
         elif request.method == 'DELETE':
             Favorite.objects.filter(user=request.user, recipe=recipe).delete()
-            return Response({'status': 'removed from favorites'})
+            return Response({'status': 'Рецепт удален из избранного'})

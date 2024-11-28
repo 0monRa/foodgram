@@ -134,6 +134,7 @@ DJOSER = {
     'LOGIN_FIELD': 'email',
     'USER_ID_FIELD': 'id',
     'USER_CREATE_PASSWORD_RETYPE': True,
+    'SET_PASSWORD_RETYPE': True,
     'SERIALIZERS': {
         'user': 'users.serializers.UserSerializer',
         'user_create': 'users.serializers.UserCreateSerializer',
