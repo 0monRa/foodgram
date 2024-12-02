@@ -1,4 +1,4 @@
-from django.urls import include, path
+from django.urls import include, path, re_path
 from rest_framework.routers import DefaultRouter
 
 from users.views import UserViewSet
@@ -20,6 +20,6 @@ router.register(r'favorites', FavoriteViewSet, basename='favorites')
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('auth/', include('djoser.urls')),
-    path('auth/', include('djoser.urls.authtoken')),
+    re_path(r'^auth/', include('djoser.urls')),
+    re_path(r'^auth/', include('djoser.urls.authtoken')),
 ]

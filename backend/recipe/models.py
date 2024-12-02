@@ -1,5 +1,5 @@
 from django.db import models
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 from users.models import User
 from django.conf import settings
 
@@ -43,13 +43,18 @@ class Recipe(models.Model):
             )
         ]
     )
-
-    def __str__(self):
-        return self.name
+    pub_date = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата создания'
+    )
 
     class Meta:
         verbose_name = 'Рецепт'
         verbose_name_plural = 'Рецепты'
+        ordering = ['pub_date']
+
+    def __str__(self):
+        return self.name
 
 
 class Tag(models.Model):
@@ -62,12 +67,12 @@ class Tag(models.Model):
         unique=True,
     )
 
-    def __str__(self):
-        return self.name
-
     class Meta:
         verbose_name = 'Тэг'
         verbose_name_plural = 'Тэги'
+
+    def __str__(self):
+        return self.name
 
 
 class Ingredient(models.Model):
@@ -81,12 +86,12 @@ class Ingredient(models.Model):
         verbose_name='Единица измерения'
     )
 
-    def __str__(self):
-        return self.name
-
     class Meta:
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
+
+    def __str__(self):
+        return self.name
 
 
 class IngredientsInRecipe(models.Model):
@@ -102,7 +107,19 @@ class IngredientsInRecipe(models.Model):
         related_name='ingredients_list',
         verbose_name='Ингридиенты'
     )
-    amount = models.PositiveSmallIntegerField('Количество')
+    amount = models.PositiveSmallIntegerField(
+        verbose_name='Количество',
+        validators=[
+            MinValueValidator(
+                settings.MIN_INGREDIENTS_AMOUNT,
+                message='Количество ингредиентов не может быть меньше 1.'
+            ),
+            MaxValueValidator(
+                settings.MAX_INGREDIENTS_AMOUNT,
+                message='Количество ингредиентов не может быть больше 10000.'
+            )
+        ]
+    )
 
     class Meta:
         constraints = [
@@ -128,12 +145,12 @@ class Follow(models.Model):
         related_name='following'
     )
 
-    def __str__(self):
-        return f'{self.user} подписан на - {self.author}'
-
     class Meta:
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
+
+    def __str__(self):
+        return f'{self.user} подписан на - {self.author}'
 
 
 class Favorite(models.Model):
@@ -148,12 +165,12 @@ class Favorite(models.Model):
         related_name='favorites'
     )
 
-    def __str__(self):
-        return f'{self.recipe} в избранном у - {self.user}'
-
     class Meta:
         verbose_name = 'Избранный рецепт'
         verbose_name_plural = 'Избранные рецепты'
+
+    def __str__(self):
+        return f'{self.recipe} в избранном у - {self.user}'
 
 
 class ShoppingCart(models.Model):
@@ -168,9 +185,9 @@ class ShoppingCart(models.Model):
         related_name='in_shopping_carts',
     )
 
-    def __str__(self):
-        return f'{self.recipe} в в корзине у - {self.user}'
-
     class Meta:
         verbose_name = 'Корзина'
         verbose_name_plural = 'Корзины'
+
+    def __str__(self):
+        return f'{self.recipe} в в корзине у - {self.user}'

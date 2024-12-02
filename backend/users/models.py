@@ -15,7 +15,11 @@ class User(AbstractUser):
     )
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username']
+    REQUIRED_FIELDS = [
+        'username',
+        'first_name',
+        'last_name'
+    ]
 
     username_validator = RegexValidator(
         regex=r'^[\w.@+-]+$',

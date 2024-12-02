@@ -1,18 +1,22 @@
+from django.db.models import Count
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets, filters
-from rest_framework.decorators import action, api_view
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import (
     IsAuthenticated,
     AllowAny,
 )
-from rest_framework_simplejwt.tokens import RefreshToken
 from api.paginations import CustomPageNumberPagination
-from api.serializers import SubscribeSerializer, FollowSerializer
+from api.serializers import FollowSerializer
 from recipe.models import Follow
 
-from .serializers import UserSerializer, UserCreateSerializer
+from .serializers import (
+    UserSerializer,
+    UserCreateSerializer,
+    SubscribeSerializer
+)
 
 from .permissions import AdministratorPermission
 
@@ -20,7 +24,9 @@ User = get_user_model()
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
+    queryset = User.objects.annotate(
+        recipes_count=Count('recipes')
+    )
     serializer_class = UserSerializer
     pagination_class = CustomPageNumberPagination
     lookup_field = 'id'
@@ -28,7 +34,12 @@ class UserViewSet(viewsets.ModelViewSet):
     search_fields = ['username', 'email']
 
     def get_queryset(self):
-        return super().get_queryset()
+        queryset = User.objects.all()
+        if self.action in ['subscriptions', 'subscribe']:
+            queryset = queryset.annotate(
+                recipes_count=Count('recipes')
+            )
+        return queryset
 
     def get_permissions(self):
         if self.action in ['create', 'list', 'retrieve']:
@@ -42,6 +53,8 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'create':
             return UserCreateSerializer
+        if self.action in ['subscriptions', 'subscribe']:
+            return SubscribeSerializer
         return UserSerializer
 
     def get_serializer_context(self):
@@ -152,17 +165,17 @@ class UserViewSet(viewsets.ModelViewSet):
             )
 
         elif request.method == 'DELETE':
-            follow, _ = Follow.objects.filter(user=user, author_id=id).delete()
-            if follow == 0:
-                if not User.objects.filter(id=id).exists():
-                    return Response(
-                        {'detail': 'Страница не найдена.'},
-                        status=status.HTTP_404_NOT_FOUND
-                    )
+            author = get_object_or_404(User, id=id)
+            deleted_count = Follow.objects.filter(
+                user=user,
+                author=author
+            ).delete()[0]
+            if deleted_count == 0:
                 return Response(
                     {'detail': 'Вы не подписаны на этого пользователя.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
+
             return Response(
                 {'detail': 'Вы успешно отписались.'},
                 status=status.HTTP_204_NO_CONTENT
@@ -195,7 +208,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-@api_view(['POST'])
+'''@api_view(['POST'])
 def auth_token(request):
     email = request.data.get('email')
     password = request.data.get('password')
@@ -215,4 +228,4 @@ def auth_token(request):
             'token': str(refresh.access_token)
         },
         status=status.HTTP_200_OK
-    )
+    )'''

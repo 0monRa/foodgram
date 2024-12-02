@@ -1,13 +1,15 @@
 import re
 from rest_framework import serializers
+from django.conf import settings
 
 from api.fields import Base64ImageField
-from recipe.models import Follow
+from recipe.models import Follow, Recipe
 from users.models import User
 
 
 class UserSerializer(serializers.ModelSerializer):
     avatar = Base64ImageField(required=False)
+    recipes_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = User
@@ -19,7 +21,8 @@ class UserSerializer(serializers.ModelSerializer):
             'last_name',
             'password',
             'is_subscribed',
-            'avatar'
+            'avatar',
+            'recipes_count',
         )
         extra_kwargs = {
             'password': {'write_only': True},
@@ -69,3 +72,57 @@ class UserCreateSerializer(serializers.ModelSerializer):
                 'Use only letters, digits, ., @, +, and - characters.'
             )
         return value
+
+
+class SubscriptionRecipeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
+
+
+class SubscribeSerializer(serializers.ModelSerializer):
+    is_subscribed = serializers.SerializerMethodField()
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = (
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'is_subscribed',
+            'recipes',
+            'recipes_count',
+            'avatar'
+        )
+
+    def get_is_subscribed(self, obj):
+        request = self.context.get('request')
+        if request is None or not hasattr(request, 'user'):
+            return False
+        user = request.user
+        if user.is_authenticated:
+            return Follow.objects.filter(user=user, author=obj).exists()
+        return False
+
+    def get_recipes(self, obj):
+        request = self.context.get('request')
+        recipes_limit = request.query_params.get(
+            'recipes_limit',
+            settings.PAGINATION_PAGE_SIZE
+        )
+        recipes = Recipe.objects.filter(author=obj)
+        if isinstance(recipes_limit, str) and recipes_limit.isdigit():
+            recipes_limit = int(recipes_limit)
+        else:
+            recipes_limit = settings.PAGINATION_PAGE_SIZE
+        recipes = recipes[:recipes_limit]
+        serializer = SubscriptionRecipeSerializer(
+            recipes,
+            many=True,
+            context={'request': request}
+        )
+        return serializer.data

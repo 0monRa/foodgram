@@ -5,8 +5,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-PAG_PAGE_SIZE = 6
+PAGINATION_PAGE_SIZE = 6
 MIN_TIME_FOR_COOKING = 1
+MIN_INGREDIENTS_AMOUNT = 1
+MAX_INGREDIENTS_AMOUNT = 10000
 
 AUTH_USER_MODEL = 'users.User'
 

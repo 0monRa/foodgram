@@ -11,8 +11,6 @@ from rest_framework import (
 )
 from rest_framework.decorators import action
 from rest_framework.response import Response
-
-from .filters import RecipeFilter, IngredientFilter
 from recipe.models import (
     Recipe,
     Tag,
@@ -24,6 +22,8 @@ from recipe.models import (
 from users.permissions import (
     IsOwnerOrAdminOrReadOnly,
 )
+from .filters import RecipeFilter, IngredientFilter
+from .paginations import CustomPageNumberPagination
 from .serializers import (
     RecipeSerializer,
     TagSerializer,
@@ -32,8 +32,6 @@ from .serializers import (
     FollowSerializer,
 )
 
-from .paginations import CustomPageNumberPagination
-
 
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all().select_related(
@@ -41,7 +39,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     ).prefetch_related(
         'tags',
         'ingredients'
-    ).order_by('-id')
+    )
     serializer_class = RecipeSerializer
     permission_classes = [
         permissions.IsAuthenticatedOrReadOnly,
@@ -101,20 +99,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @add_to_shopping_cart.mapping.delete
     def remove_from_shopping_cart(self, request, pk=None):
-        cart_item, _ = ShoppingCart.objects.filter(
+        get_object_or_404(Recipe, id=pk)
+        deleted_count = ShoppingCart.objects.filter(
             user=request.user,
             recipe_id=pk
-        ).delete()
-        if cart_item == 0:
-            if not Recipe.objects.filter(id=pk).exists():
-                return Response(
-                    {'detail': 'Рецепт не найден.'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
+        ).delete()[0]
+
+        if deleted_count == 0:
             return Response(
-                {'detail': 'Рецепта нет в корзине.'},
+                {'detail': 'Рецепта нет в корзине или он не найден.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
         return Response(
             {'detail': 'Рецепт удалён из корзины.'},
             status=status.HTTP_204_NO_CONTENT
@@ -138,8 +134,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         content = 'Список покупок:\n'
         for ingredient in ingredients:
             content += (
-                f"{ingredient['name']} — {ingredient['total_amount']} "
-                f"{ingredient['measurement_unit']}\n"
+                f'{ingredient["name"]} — {ingredient["total_amount"]} '
+                f'{ingredient["measurement_unit"]}\n'
             )
 
         buffer = BytesIO()
@@ -193,20 +189,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @favorite.mapping.delete
     def remove_favorite(self, request, pk=None):
-        favorite, _ = Favorite.objects.filter(
+        get_object_or_404(Recipe, id=pk)
+        deleted_count = Favorite.objects.filter(
             user=request.user,
             recipe_id=pk
-        ).delete()
-        if favorite == 0:
-            if not Recipe.objects.filter(id=pk).exists():
-                return Response(
-                    {'detail': 'Рецепт не найден.'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
+        ).delete()[0]
+
+        if deleted_count == 0:
             return Response(
-                {'detail': 'Рецепта нет в избранном.'},
+                {'detail': 'Рецепта нет в избранном или он не найден.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
         return Response(
             {'detail': 'Рецепт удалён из избранного.'},
             status=status.HTTP_204_NO_CONTENT
@@ -227,9 +221,6 @@ class IngredientViewSet(viewsets.ModelViewSet):
     permission_classes = (permissions.AllowAny, )
     filter_backends = [DjangoFilterBackend]
     filterset_class = IngredientFilter
-
-    def get_queryset(self):
-        return self.queryset
 
 
 class FollowViewSet(viewsets.ModelViewSet):
@@ -257,9 +248,32 @@ class FavoriteViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post', 'delete'])
     def toggle_favorite(self, request, pk=None):
         recipe = get_object_or_404(Recipe, pk=pk)
+
         if request.method == 'POST':
-            Favorite.objects.create(user=request.user, recipe=recipe)
-            return Response({'status': 'Рецепт добавлен в избранное'})
+            serializer = FavoriteSerializer(
+                data={
+                    'user': request.user.id,
+                    'recipe': recipe.id
+                }
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(
+                {'status': 'Рецепт добавлен в избранное'},
+                status=status.HTTP_201_CREATED
+            )
+
         elif request.method == 'DELETE':
-            Favorite.objects.filter(user=request.user, recipe=recipe).delete()
-            return Response({'status': 'Рецепт удален из избранного'})
+            deleted_count, _ = Favorite.objects.filter(
+                user=request.user,
+                recipe=recipe
+            ).delete()
+            if deleted_count == 0:
+                return Response(
+                    {'detail': 'Рецепт не был в избранном'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            return Response(
+                {'status': 'Рецепт удален из избранного'},
+                status=status.HTTP_204_NO_CONTENT
+            )
