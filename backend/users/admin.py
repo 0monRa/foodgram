@@ -6,9 +6,7 @@ from .models import User
 
 @admin.register(User)
 class UserAdmin(DefaultUserAdmin):
-    """Кастомизация админки для модели User."""
     model = User
-    # Добавляем кастомные поля, если они есть
     fieldsets = DefaultUserAdmin.fieldsets + (
         ('Дополнительные поля', {'fields': ('role',)}),
     )

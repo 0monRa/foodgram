@@ -8,8 +8,10 @@ from rest_framework.permissions import (
     IsAuthenticated,
     AllowAny,
 )
+
 from api.paginations import CustomPageNumberPagination
 from api.serializers import FollowSerializer
+from api.permissions import AdministratorPermission
 from recipe.models import Follow
 
 from .serializers import (
@@ -17,8 +19,6 @@ from .serializers import (
     UserCreateSerializer,
     SubscribeSerializer
 )
-
-from .permissions import AdministratorPermission
 
 User = get_user_model()
 
@@ -166,10 +166,10 @@ class UserViewSet(viewsets.ModelViewSet):
 
         elif request.method == 'DELETE':
             author = get_object_or_404(User, id=id)
-            deleted_count = Follow.objects.filter(
+            deleted_count, _ = Follow.objects.filter(
                 user=user,
                 author=author
-            ).delete()[0]
+            ).delete()
             if deleted_count == 0:
                 return Response(
                     {'detail': 'Вы не подписаны на этого пользователя.'},
@@ -188,13 +188,12 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def subscriptions(self, request):
         user = request.user
-        follows = Follow.objects.filter(user=user).select_related('author')
-        page = self.paginate_queryset(follows)
-        authors = [follow.author for follow in page]
+        authors = User.objects.filter(following__user=user)
+        page = self.paginate_queryset(authors)
 
         if page is not None:
             serializer = SubscribeSerializer(
-                authors,
+                page,
                 many=True,
                 context={'request': request}
             )
@@ -206,26 +205,3 @@ class UserViewSet(viewsets.ModelViewSet):
             context={'request': request}
         )
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-'''@api_view(['POST'])
-def auth_token(request):
-    email = request.data.get('email')
-    password = request.data.get('password')
-    user = get_object_or_404(User, email=email)
-
-    if not user.check_password(password):
-        return Response(
-            {
-                'detail': 'Неверные учетные данные.'
-            },
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    refresh = RefreshToken.for_user(user)
-    return Response(
-        {
-            'token': str(refresh.access_token)
-        },
-        status=status.HTTP_200_OK
-    )'''

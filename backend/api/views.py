@@ -19,17 +19,19 @@ from recipe.models import (
     Follow,
     ShoppingCart
 )
-from users.permissions import (
+from .permissions import (
     IsOwnerOrAdminOrReadOnly,
 )
 from .filters import RecipeFilter, IngredientFilter
 from .paginations import CustomPageNumberPagination
 from .serializers import (
     RecipeSerializer,
+    RecipeShortSerializer,
     TagSerializer,
     IngredientSerializer,
     FavoriteSerializer,
     FollowSerializer,
+    ShoppingCartSerializer
 )
 
 
@@ -77,33 +79,29 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def add_to_shopping_cart(self, request, pk=None):
         recipe = get_object_or_404(Recipe, id=pk)
-        cart_item, created = ShoppingCart.objects.get_or_create(
-            user=request.user,
-            recipe=recipe
+
+        serializer = ShoppingCartSerializer(
+            data={'user': request.user.id, 'recipe': recipe.id},
+            context={'request': request}
         )
-        if not created:
-            return Response(
-                {'detail': 'Рецепт уже добавлен в корзину.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        response_data = {
-            'id': recipe.id,
-            'name': recipe.name,
-            'image': request.build_absolute_uri(recipe.image.url),
-            'cooking_time': recipe.cooking_time
-        }
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        recipe_serializer = RecipeShortSerializer(
+            recipe, context={'request': request}
+        )
         return Response(
-            response_data,
+            recipe_serializer.data,
             status=status.HTTP_201_CREATED,
         )
 
     @add_to_shopping_cart.mapping.delete
     def remove_from_shopping_cart(self, request, pk=None):
-        get_object_or_404(Recipe, id=pk)
-        deleted_count = ShoppingCart.objects.filter(
+        recipe = get_object_or_404(Recipe, id=pk)
+        deleted_count, _ = ShoppingCart.objects.filter(
             user=request.user,
-            recipe_id=pk
-        ).delete()[0]
+            recipe=recipe
+        ).delete()
 
         if deleted_count == 0:
             return Response(
@@ -169,31 +167,23 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def favorite(self, request, pk=None):
         recipe = get_object_or_404(Recipe, id=pk)
-        favorite, created = Favorite.objects.get_or_create(
-            user=request.user,
-            recipe=recipe
-        )
-        if not created:
-            return Response(
-                {'detail': 'Рецепт уже в избранном.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        serializer = FavoriteSerializer(
+            data={'user': request.user.id, 'recipe': recipe.id})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
 
-        response_data = {
-            'id': recipe.id,
-            'name': recipe.name,
-            'image': request.build_absolute_uri(recipe.image.url),
-            'cooking_time': recipe.cooking_time
-        }
-        return Response(response_data, status=status.HTTP_201_CREATED)
+        recipe_serializer = RecipeShortSerializer(
+            recipe, context={'request': request}
+        )
+        return Response(recipe_serializer.data, status=status.HTTP_201_CREATED)
 
     @favorite.mapping.delete
     def remove_favorite(self, request, pk=None):
-        get_object_or_404(Recipe, id=pk)
-        deleted_count = Favorite.objects.filter(
+        recipe = get_object_or_404(Recipe, id=pk)
+        deleted_count, _ = Favorite.objects.filter(
             user=request.user,
-            recipe_id=pk
-        ).delete()[0]
+            recipe=recipe
+        ).delete()
 
         if deleted_count == 0:
             return Response(

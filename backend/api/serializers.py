@@ -1,4 +1,4 @@
-from rest_framework import serializers
+from rest_framework import serializers, validators
 
 from recipe.models import (
     Favorite,
@@ -10,7 +10,6 @@ from recipe.models import (
     Tag
 )
 from users.models import User
-
 from users.serializers import UserSerializer
 
 from .fields import Base64ImageField
@@ -168,10 +167,32 @@ class RecipeSerializer(serializers.ModelSerializer):
         return value
 
 
+class RecipeShortSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
+
+    def validate(self, data):
+        user = data['user']
+        recipe = data['recipe']
+        if Favorite.objects.filter(user=user, recipe=recipe).exists():
+            raise serializers.ValidationError(
+                {'detail': 'Рецепт уже в избранном.'}
+            )
+        return data
+
+
 class FavoriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Favorite
         fields = ('user', 'recipe')
+        validators = [
+            validators.UniqueTogetherValidator(
+                queryset=Favorite.objects.all(),
+                fields=['user', 'recipe'],
+                message='Рецепт уже добавлен в избарнное.'
+            )
+        ]
 
 
 class FollowSerializer(serializers.ModelSerializer):
@@ -184,11 +205,38 @@ class FollowSerializer(serializers.ModelSerializer):
 
 
 class ShoppingCartSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(
+        source='recipe.id',
+        read_only=True
+    )
+    name = serializers.CharField(
+        source='recipe.name',
+        read_only=True
+    )
+    image = serializers.ImageField(
+        source='recipe.image',
+        read_only=True
+    )
+    cooking_time = serializers.IntegerField(
+        source='recipe.cooking_time',
+        read_only=True
+    )
+    user = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        write_only=True
+    )
+    recipe = serializers.PrimaryKeyRelatedField(
+        queryset=Recipe.objects.all(),
+        write_only=True
+    )
+
     class Meta:
         model = ShoppingCart
-        fields = (
-            'id',
-            'name',
-            'image',
-            'cooking_time'
-        )
+        fields = ('id', 'name', 'image', 'cooking_time', 'user', 'recipe')
+        validators = [
+            validators.UniqueTogetherValidator(
+                queryset=ShoppingCart.objects.all(),
+                fields=['user', 'recipe'],
+                message='Рецепт уже добавлен в корзину.'
+            )
+        ]
