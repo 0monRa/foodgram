@@ -42,7 +42,7 @@ class UserSerializer(serializers.ModelSerializer):
         if obj.avatar and hasattr(obj.avatar, 'url'):
             return request.build_absolute_uri(obj.avatar.url)
         return request.build_absolute_uri(
-            '/static/media/userpic-icon.2e3faa821bb5398be2c6.jpg'
+            f'{settings.MEDIA_URL}users/avatars/userpic-icon.jpg'
         )
 
 
