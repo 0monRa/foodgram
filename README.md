@@ -44,3 +44,13 @@ sudo docker exec -it foodgram-back python manage.py loaddata ./data/ingredients.
 ```
 
 Далее, необходимо перйти в админ-панель и создать несколько тэгов
+
+### IP-адрес:
+130.193.55.17
+
+### Доменное имя:
+foodgrammyproject.zapto.org
+
+### Данные от админки:
+Почта: admin@admin.com
+Пароль: E~ycnSf3
