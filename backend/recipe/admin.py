@@ -11,13 +11,25 @@ class RecipeAdmin(admin.ModelAdmin):
         'author',
         'favorites_count'
     )
+    list_display_links = (
+        'id',
+        'name'
+    )
     search_fields = (
         'name',
         'author__username',
         'author__email'
     )
     list_filter = ('tags',)
-    ordering = ('id',)
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.select_related(
+            'author'
+        ).prefetch_related(
+            'tags',
+            'ingredients'
+        )
 
     def tags_list(self, obj):
         return ', '.join(tag.name for tag in obj.tags.all())
@@ -35,6 +47,11 @@ class TagAdmin(admin.ModelAdmin):
         'name',
         'slug'
     )
+    list_display_links = (
+        'id',
+        'name',
+        'slug'
+    )
     search_fields = ('name',)
     ordering = ('id',)
 
@@ -45,6 +62,10 @@ class IngredientAdmin(admin.ModelAdmin):
         'id',
         'name',
         'measurement_unit'
+    )
+    list_display_links = (
+        'id',
+        'name',
     )
     search_fields = ('name',)
     ordering = ('id',)

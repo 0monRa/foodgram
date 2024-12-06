@@ -5,14 +5,14 @@ from django.db.models import Count, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from rest_framework import (
     viewsets,
     permissions,
     status,
     filters
 )
-from rest_framework.decorators import action
-from rest_framework.response import Response
 
 from recipe.models import (
     Recipe,
@@ -176,6 +176,9 @@ class UserViewSet(viewsets.ModelViewSet):
             serializer = FollowSerializer(data=data)
             serializer.is_valid(raise_exception=True)
             serializer.save()
+            author = User.objects.annotate(
+                recipes_count=Count('recipes')
+            ).get(id=author.id)
             response_serializer = SubscribeSerializer(
                 author,
                 context={'request': request}
@@ -209,7 +212,9 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def subscriptions(self, request):
         user = request.user
-        authors = User.objects.filter(following__user=user)
+        authors = User.objects.filter(following__user=user).annotate(
+            recipes_count=Count('recipes')
+        )
         page = self.paginate_queryset(authors)
 
         if page is not None:

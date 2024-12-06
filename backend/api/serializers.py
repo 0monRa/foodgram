@@ -137,6 +137,9 @@ class SubscribeSerializer(serializers.ModelSerializer):
         )
         return serializer.data
 
+    def get_recipes_count(self, obj):
+        return getattr(obj, 'recipes_count', 0)
+
 
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
