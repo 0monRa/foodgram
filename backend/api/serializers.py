@@ -1,17 +1,10 @@
 import re
 
-from rest_framework import serializers, validators
 from django.conf import settings
+from rest_framework import serializers, validators
 
-from recipe.models import (
-    Favorite,
-    Follow,
-    Ingredient,
-    IngredientsInRecipe,
-    Recipe,
-    ShoppingCart,
-    Tag
-)
+from recipe.models import (Favorite, Follow, Ingredient, IngredientsInRecipe,
+                           Recipe, ShoppingCart, Tag)
 from users.models import User
 
 from .fields import Base64ImageField
