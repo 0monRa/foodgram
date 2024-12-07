@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Ingredient, Recipe, Tag
+from .models import Ingredient, Recipe, Tag, ShoppingCart, Favorite, Follow
 
 
 @admin.register(Recipe)
@@ -53,7 +53,6 @@ class TagAdmin(admin.ModelAdmin):
         'slug'
     )
     search_fields = ('name',)
-    ordering = ('id',)
 
 
 @admin.register(Ingredient)
@@ -68,4 +67,51 @@ class IngredientAdmin(admin.ModelAdmin):
         'name',
     )
     search_fields = ('name',)
-    ordering = ('id',)
+
+
+@admin.register(ShoppingCart)
+class ShoppingCartAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'user',
+        'recipe',
+    )
+    list_display_links = ('id', 'user', 'recipe')
+    search_fields = ('user__username', 'recipe__name')
+    list_filter = ('user',)
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.select_related('user', 'recipe')
+
+
+@admin.register(Favorite)
+class FavoriteAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'user',
+        'recipe',
+    )
+    list_display_links = ('id', 'user', 'recipe')
+    search_fields = ('user__username', 'recipe__name')
+    list_filter = ('user',)
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.select_related('user', 'recipe')
+
+
+@admin.register(Follow)
+class FollowAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'user',
+        'author',
+    )
+    list_display_links = ('id', 'user', 'author')
+    search_fields = ('user__username', 'author__username')
+    list_filter = ('user', 'author')
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.select_related('user', 'author')
