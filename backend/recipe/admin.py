@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Ingredient, Recipe, Tag, ShoppingCart, Favorite, Follow
+from .models import Favorite, Follow, Ingredient, Recipe, ShoppingCart, Tag
 
 
 @admin.register(Recipe)
@@ -69,49 +69,43 @@ class IngredientAdmin(admin.ModelAdmin):
     search_fields = ('name',)
 
 
-@admin.register(ShoppingCart)
-class ShoppingCartAdmin(admin.ModelAdmin):
+@admin.register(Follow)
+class FollowAdmin(admin.ModelAdmin):
     list_display = (
-        'id',
         'user',
-        'recipe',
+        'author'
     )
-    list_display_links = ('id', 'user', 'recipe')
-    search_fields = ('user__username', 'recipe__name')
-    list_filter = ('user',)
+    list_filter = ('author',)
+    search_fields = ('user',)
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
-        return queryset.select_related('user', 'recipe')
+        return queryset.select_related('user', 'author')
 
 
 @admin.register(Favorite)
 class FavoriteAdmin(admin.ModelAdmin):
     list_display = (
-        'id',
         'user',
-        'recipe',
+        'recipe'
     )
-    list_display_links = ('id', 'user', 'recipe')
-    search_fields = ('user__username', 'recipe__name')
     list_filter = ('user',)
+    search_fields = ('user',)
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
         return queryset.select_related('user', 'recipe')
 
 
-@admin.register(Follow)
-class FollowAdmin(admin.ModelAdmin):
+@admin.register(ShoppingCart)
+class ShoppingCartAdmin(admin.ModelAdmin):
     list_display = (
-        'id',
         'user',
-        'author',
+        'recipe'
     )
-    list_display_links = ('id', 'user', 'author')
-    search_fields = ('user__username', 'author__username')
-    list_filter = ('user', 'author')
+    list_filter = ('user',)
+    search_fields = ('user',)
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
-        return queryset.select_related('user', 'author')
+        return queryset.select_related('user', 'recipe')
